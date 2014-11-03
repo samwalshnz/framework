@@ -4,12 +4,7 @@ use Illuminate\Support\Collection;
 
 class MethodEndpoint implements EndpointInterface {
 
-	/**
-	 * The route defintion template.
-	 *
-	 * @var string
-	 */
-	protected $template = '$router->%s(\'%s\', [\'uses\' => \'%s\', \'domain\' => %s, \'as\' => %s, \'middleware\' => %s, \'where\' => %s]);';
+	use EndpointTrait;
 
 	/**
 	 * The ReflectionClass instance for the controller class.
@@ -77,12 +72,12 @@ class MethodEndpoint implements EndpointInterface {
 		foreach ($this->paths as $path)
 		{
 			$routes[] = sprintf(
-				$this->template, $path->verb, $path->path, $this->uses, var_export($path->domain, true),
-				var_export($path->as, true), var_export($this->getMiddleware($path), true), var_export($path->where, true)
+				$this->getTemplate(), $path->verb, $path->path, $this->uses, var_export($path->as, true),
+				$this->getMiddleware($path), $this->implodeArray($path->where), var_export($path->domain, true)
 			);
 		}
 
-		return implode(PHP_EOL, $routes);
+		return implode(PHP_EOL.PHP_EOL, $routes);
 	}
 
 	/**
@@ -95,7 +90,9 @@ class MethodEndpoint implements EndpointInterface {
 	{
 		$classMiddleware = $this->getClassMiddlewareForPath($path)->all();
 
-		return array_merge($classMiddleware, $path->middleware, $this->middleware);
+		return $this->implodeArray(
+			array_merge($classMiddleware, $path->middleware, $this->middleware)
+		);
 	}
 
 	/**
@@ -117,27 +114,6 @@ class MethodEndpoint implements EndpointInterface {
 	}
 
 	/**
-	 * Determine if the middleware applies to a given method.
-	 *
-	 * @param  string  $method
-	 * @param  array  $middleware
-	 * @return bool
-	 */
-	protected function middlewareAppliesToMethod($method, array $middleware)
-	{
-		if ( ! empty($middleware['only']) && ! in_array($method, $middleware['only']))
-		{
-			return false;
-		}
-		elseif ( ! empty($middleware['except']) && in_array($method, $middleware['except']))
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
 	 * Determine if the endpoint has any paths.
 	 *
 	 * @var bool
@@ -148,28 +124,6 @@ class MethodEndpoint implements EndpointInterface {
 	}
 
 	/**
-	 * Get the controller method for the given endpoint path.
-	 *
-	 * @param  AbstractPath  $path
-	 * @return string
-	 */
-	public function getMethodForPath(AbstractPath $path)
-	{
-		return $this->method;
-	}
-
-	/**
-	 * Add the given path definition to the endpoint.
-	 *
-	 * @param  AbstractPath  $path
-	 * @return void
-	 */
-	public function addPath(AbstractPath $path)
-	{
-		$this->paths[] = $path;
-	}
-
-	/**
 	 * Get all of the path definitions for an endpoint.
 	 *
 	 * @return array
@@ -177,6 +131,22 @@ class MethodEndpoint implements EndpointInterface {
 	public function getPaths()
 	{
 		return $this->paths;
+	}
+
+	/**
+	 * Get the template for the endpoint.
+	 *
+	 * @return string
+	 */
+	protected function getTemplate()
+	{
+		return '$router->%s(\'%s\', [
+	\'uses\' => \'%s\',
+	\'as\' => %s,
+	\'middleware\' => [%s],
+	\'where\' => [%s],
+	\'domain\' => %s,
+]);';
 	}
 
 }

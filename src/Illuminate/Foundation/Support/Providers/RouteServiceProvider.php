@@ -1,9 +1,23 @@
 <?php namespace Illuminate\Foundation\Support\Providers;
 
-use Closure;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Routing\Annotations\Scanner;
 
 class RouteServiceProvider extends ServiceProvider {
+
+	/**
+	 * The controllers to scan for route annotations.
+	 *
+	 * @var array
+	 */
+	protected $scan = [];
+
+	/**
+	 * Determines if we will auto-scan in the local environment.
+	 *
+	 * @var bool
+	 */
+	protected $scanWhenLocal = false;
 
 	/**
 	 * Register the service provider.
@@ -12,12 +26,33 @@ class RouteServiceProvider extends ServiceProvider {
 	 */
 	public function boot()
 	{
+		$this->addMiddleware();
+
 		$this->app->call([$this, 'before']);
 
 		if ($this->app->routesAreCached())
-			return $this->loadCachedRoutes();
+		{
+			$this->loadCachedRoutes();
+		}
+		else
+		{
+			$this->loadRoutes();
+		}
+	}
 
-		$this->loadRoutes();
+	/**
+	 * Add the short-hand middleware names to the router.
+	 *
+	 * @return void
+	 */
+	protected function addMiddleware()
+	{
+		$router = $this->app['router'];
+
+		foreach ($this->middleware as $key => $value)
+		{
+			$router->middleware($key, $value);
+		}
 	}
 
 	/**
@@ -40,10 +75,31 @@ class RouteServiceProvider extends ServiceProvider {
 	 */
 	protected function loadRoutes()
 	{
-		if ($this->app->routesAreScanned())
+		if ($this->app->environment('local') && $this->scanWhenLocal)
+		{
+			$this->scanRoutes();
+		}
+
+		if ( ! empty($this->scan) && $this->app->routesAreScanned())
+		{
 			$this->loadScannedRoutes();
+		}
 
 		$this->app->call([$this, 'map']);
+	}
+
+	/**
+	 * Scan the routes and write the scanned routes file.
+	 *
+	 * @return void
+	 */
+	protected function scanRoutes()
+	{
+		if (empty($this->scan)) return;
+
+		$scanner = new Scanner($this->scan);
+
+		file_put_contents($this->app->getScannedRoutesPath(), '<?php '.$scanner->getRouteDefinitions());
 	}
 
 	/**
@@ -69,22 +125,13 @@ class RouteServiceProvider extends ServiceProvider {
 	public function register() {}
 
 	/**
-	 * Register the given Closure with the "group" function namespace set.
+	 * Get the classes to be scanned by the provider.
 	 *
-	 * @param  string  $namespace
-	 * @param  \Closure  $callback
-	 * @return void
+	 * @return array
 	 */
-	protected function namespaced($namespace, Closure $callback)
+	public function scans()
 	{
-		if (empty($namespace))
-		{
-			$callback($this->app['router']);
-		}
-		else
-		{
-			$this->app['router']->group(compact('namespace'), $callback);
-		}
+		return $this->scan;
 	}
 
 	/**

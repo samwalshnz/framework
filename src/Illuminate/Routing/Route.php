@@ -8,10 +8,8 @@ use Illuminate\Routing\Matching\UriValidator;
 use Illuminate\Routing\Matching\HostValidator;
 use Illuminate\Routing\Matching\MethodValidator;
 use Illuminate\Routing\Matching\SchemeValidator;
-use Illuminate\Routing\Controller as BaseController;
 use Symfony\Component\Routing\Route as SymfonyRoute;
 use Illuminate\Http\Exception\HttpResponseException;
-use Illuminate\Routing\RouteDependencyResolverTrait;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class Route {
@@ -125,13 +123,13 @@ class Route {
 
 		try
 		{
+			if ( ! is_string($this->action['uses']))
+				return $this->runCallable($request);
+
 			if ($this->customDispatcherIsBound())
 				return $this->runWithCustomDispatcher($request);
 
-			if (is_string($this->action['uses']))
-				return $this->runController($request);
-
-			return $this->runCallable($request);
+			return $this->runController($request);
 		}
 		catch (HttpResponseException $e)
 		{
@@ -353,6 +351,17 @@ class Route {
 		list($name, $parameters) = explode(':', $filter, 2);
 
 		return array($name, explode(',', $parameters));
+	}
+
+	/**
+	 * Determine a given parameter exists from the route
+	 *
+	 * @param  string $name
+	 * @return bool
+	 */
+	public function hasParameter($name)
+	{
+		return array_key_exists($name, $this->parameters());
 	}
 
 	/**

@@ -4,12 +4,7 @@ use Illuminate\Support\Collection;
 
 class ResourceEndpoint implements EndpointInterface {
 
-	/**
-	 * The route defintion template.
-	 *
-	 * @var string
-	 */
-	protected $template = '$router->group([\'middleware\' => %s, \'prefix\' => %s, \'domain\' => %s, \'where\' => %s], function($router) { $router->resource(%s, %s, [\'only\' => %s, \'names\' => %s]); });';
+	use EndpointTrait;
 
 	/**
 	 * All of the resource controller methods.
@@ -138,15 +133,16 @@ class ResourceEndpoint implements EndpointInterface {
 		foreach ($this->paths as $path)
 		{
 			$routes[] = sprintf(
-				$this->template, var_export($this->getMiddleware($path), true),
-				var_export($path->path, true), var_export($path->domain, true),
-				var_export($path->where, true), var_export($this->name, true),
-				var_export($this->reflection->name, true), var_export([$path->method], true),
-				var_export($this->getNames($path), true)
+				$this->getTemplate(), 'Resource: '.$this->name.'@'.$path->method,
+				$this->implodeArray($this->getMiddleware($path)),
+				var_export($path->path, true), $this->implodeArray($path->where),
+				var_export($path->domain, true), var_export($this->name, true),
+				var_export($this->reflection->name, true), $this->implodeArray([$path->method]),
+				$this->implodeArray($this->getNames($path))
 			);
 		}
 
-		return implode(PHP_EOL, $routes);
+		return implode(PHP_EOL.PHP_EOL, $routes);
 	}
 
 	/**
@@ -183,27 +179,6 @@ class ResourceEndpoint implements EndpointInterface {
 	}
 
 	/**
-	 * Determine if the middleware applies to a given method.
-	 *
-	 * @param  string  $method
-	 * @param  array  $middleware
-	 * @return bool
-	 */
-	protected function middlewareAppliesToMethod($method, array $middleware)
-	{
-		if ( ! empty($middleware['only']) && ! in_array($method, $middleware['only']))
-		{
-			return false;
-		}
-		elseif ( ! empty($middleware['except']) && in_array($method, $middleware['except']))
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-	/**
 	 * Get the names for the given path.
 	 *
 	 * @param  ResourcePath  $path
@@ -225,28 +200,6 @@ class ResourceEndpoint implements EndpointInterface {
 	}
 
 	/**
-	 * Get the controller method for the given endpoint path.
-	 *
-	 * @param  AbstractPath  $path
-	 * @return string
-	 */
-	public function getMethodForPath(AbstractPath $path)
-	{
-		return $path->method;
-	}
-
-	/**
-	 * Add the given path definition to the endpoint.
-	 *
-	 * @param  AbstractPath  $path
-	 * @return void
-	 */
-	public function addPath(AbstractPath $path)
-	{
-		$this->paths[] = $path;
-	}
-
-	/**
 	 * Get all of the path definitions for an endpoint.
 	 *
 	 * @return array[AbstractPath]
@@ -254,6 +207,20 @@ class ResourceEndpoint implements EndpointInterface {
 	public function getPaths()
 	{
 		return $this->paths;
+	}
+
+	/**
+	 * Get the template for the endpoint.
+	 *
+	 * @return string
+	 */
+	protected function getTemplate()
+	{
+		return '// %s
+$router->group([\'middleware\' => [%s], \'prefix\' => %s, \'where\' => [%s], \'domain\' => %s], function() use ($router)
+{
+	$router->resource(%s, %s, [\'only\' => [%s], \'names\' => [%s]]);
+});';
 	}
 
 }

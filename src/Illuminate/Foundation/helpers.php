@@ -37,7 +37,7 @@ if ( ! function_exists('action'))
 if ( ! function_exists('app'))
 {
 	/**
-	 * Get the root Facade application instance.
+	 * Get the available container instance.
 	 *
 	 * @param  string  $make
 	 * @return mixed
@@ -49,7 +49,7 @@ if ( ! function_exists('app'))
 			return app()->make($make);
 		}
 
-		return Illuminate\Support\Facades\Facade::getFacadeApplication();
+		return Illuminate\Container\Container::getInstance();
 	}
 }
 
@@ -215,7 +215,7 @@ if ( ! function_exists('info'))
 	 * Write some information to the log.
 	 *
 	 * @param  string  $message
-	 * @param  array  $context
+	 * @param  array   $context
 	 * @return void
 	 */
 	function info($message, $context = array())
@@ -304,14 +304,16 @@ if ( ! function_exists('redirect'))
 	 * Get an instance of the redirector.
 	 *
 	 * @param  string|null  $to
-	 * @param  int  $status
+	 * @param  int     $status
+	 * @param  array   $headers
+	 * @param  bool    $secure
 	 * @return \Illuminate\Routing\Redirector|\Illuminate\Http\RedirectResponse
 	 */
-	function redirect($to = null, $status = 302)
+	function redirect($to = null, $status = 302, $headers = array(), $secure = null)
 	{
 		if ( ! is_null($to))
 		{
-			return app('redirect')->to($to, $status);
+			return app('redirect')->to($to, $status, $headers, $secure);
 		}
 		else
 		{
@@ -350,8 +352,8 @@ if ( ! function_exists('route'))
 	 *
 	 * @param  string  $name
 	 * @param  array   $parameters
-	 * @param  bool  $absolute
-	 * @param  \Illuminate\Routing\Route $route
+	 * @param  bool    $absolute
+	 * @param  \Illuminate\Routing\Route  $route
 	 * @return string
 	 */
 	function route($name, $parameters = array(), $absolute = true, $route = null)
@@ -394,8 +396,8 @@ if ( ! function_exists('storage_path'))
 	/**
 	 * Get the path to the storage folder.
 	 *
-	 * @param   string  $path
-	 * @return  string
+	 * @param  string  $path
+	 * @return string
 	 */
 	function storage_path($path = '')
 	{
@@ -475,4 +477,31 @@ if ( ! function_exists('view'))
 
 		return $factory->make($view, $data, $mergeData);
 	}
+}
+
+if ( ! function_exists('elixir'))
+{
+       /**
+	* Get the path to a versioned Elixir file.
+	*
+	* @param  string  $file
+	* @return string
+	*/
+	function elixir($file)
+	{
+		static $manifest = null;
+
+		if (is_null($manifest))
+		{
+		    $manifest = json_decode(file_get_contents(public_path().'/build/rev-manifest.json'), true);
+		}
+
+		if (isset($manifest[$file]))
+		{
+		    return '/build/'.$manifest[$file];
+		}
+
+		throw new InvalidArgumentException("File {$file} not defined in asset manifest.");
+	}
+
 }

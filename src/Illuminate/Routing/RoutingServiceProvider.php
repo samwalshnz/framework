@@ -42,17 +42,18 @@ class RoutingServiceProvider extends ServiceProvider {
 	{
 		$this->app['url'] = $this->app->share(function($app)
 		{
+			$routes = $app['router']->getRoutes();
+
 			// The URL generator needs the route collection that exists on the router.
 			// Keep in mind this is an object, so we're passing by references here
 			// and all the registered routes will be available to the generator.
-			$routes = $app['router']->getRoutes();
-
 			$app->instance('routes', $routes);
 
-			$url = new UrlGenerator($routes, $app->rebinding('request', function($app, $request)
-			{
-				$app['url']->setRequest($request);
-			}));
+			$url = new UrlGenerator(
+				$routes, $app->rebinding(
+					'request', $this->requestRebinder()
+				)
+			);
 
 			// If the route collection is "rebound", for example, when the routes stay
 			// cached for the application, we will need to rebind the routes on the
@@ -64,6 +65,19 @@ class RoutingServiceProvider extends ServiceProvider {
 
 			return $url;
 		});
+	}
+
+	/**
+	 * Get the URL generator request rebinder.
+	 *
+	 * @return \Closure
+	 */
+	protected function requestRebinder()
+	{
+		return function($app, $request)
+		{
+			$app['url']->setRequest($request);
+		};
 	}
 
 	/**

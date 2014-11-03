@@ -1,11 +1,7 @@
 <?php namespace Illuminate\Pagination;
 
 use Closure;
-use Countable;
-use ArrayAccess;
 use ArrayIterator;
-use JsonSerializable;
-use IteratorAggregate;
 
 abstract class AbstractPaginator {
 
@@ -47,7 +43,7 @@ abstract class AbstractPaginator {
 	/**
 	 * The URL fragment to add to all URLs.
 	 *
-	 * @var string
+	 * @var string|null
 	 */
 	protected $fragment = null;
 
@@ -95,7 +91,9 @@ abstract class AbstractPaginator {
 		$urls = [];
 
 		for ($page = $start; $page <= $end; $page++)
+		{
 			$urls[$page] = $this->url($page);
+		}
 
 		return $urls;
 	}
@@ -108,7 +106,7 @@ abstract class AbstractPaginator {
 	 */
 	public function url($page)
 	{
-		if ($page <= 0) $page = 1;;
+		if ($page <= 0) $page = 1;
 
 		// If we have any extra query string key / value pairs that need to be added
 		// onto the URL, we will put them in query string form and then attach it
@@ -128,7 +126,7 @@ abstract class AbstractPaginator {
 	/**
 	 * Get the URL for the previous page.
 	 *
-	 * @return string
+	 * @return string|null
 	 */
 	public function previousPageUrl()
 	{
@@ -142,7 +140,7 @@ abstract class AbstractPaginator {
 	 * Get / set the URL fragment to be appended to URLs.
 	 *
 	 * @param  string|null  $fragment
-	 * @return $this|string
+	 * @return $this|string|null
 	 */
 	public function fragment($fragment = null)
 	{
@@ -157,7 +155,7 @@ abstract class AbstractPaginator {
 	 * Add a set of query string values to the paginator.
 	 *
 	 * @param  array|string  $key
-	 * @param  string  $value
+	 * @param  string|null  $value
 	 * @return $this
 	 */
 	public function appends($key, $value = null)
@@ -332,6 +330,16 @@ abstract class AbstractPaginator {
 	public function getIterator()
 	{
 		return new ArrayIterator($this->items->all());
+	}
+
+	/**
+	 * Determine if the list of items is empty or not.
+	 *
+	 * @return bool
+	 */
+	public function isEmpty()
+	{
+		return empty($this->items);
 	}
 
 	/**
